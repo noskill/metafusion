@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 from typing import Type
 import threading
-from collections import deque
+from queue import Queue, Full
 import random
 import yaml
 from pathlib import Path
@@ -18,6 +18,7 @@ class ServiceThreadBase(threading.Thread):
     def __init__(self, cfg_file):
         super().__init__(name='imgen', daemon=False)
         cfg_file = Path(cfg_file)
+        self.queue_num = 0
         self.cwd = cfg_file.parent
         with open(cfg_file, "r") as f:
             self.config = yaml.safe_load(f)
@@ -30,10 +31,10 @@ class ServiceThreadBase(threading.Thread):
             logging.basicConfig(filename=logname, level=logging.INFO)
         self.logger = logging.getLogger(__name__)
         self.sessions = {}
-        self.queue = deque()
         self.qlimit = 5
+        self.queue = Queue(self.qlimit)
         self.max_img_cnt = 20
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._stop = False
         self._loader = Loader()
         self._pipe_name_to_pipe = dict()
@@ -81,7 +82,7 @@ class ServiceThreadBase(threading.Thread):
             id = str(random.randint(0, 1024*1024*1024*4-1))
             self.sessions[id] = {**args}
             self.sessions[id]["images"] = []
-            self.logger.info("OPENING session %s", id)
+            self.logger.info("OPENING session %s, model %s", id, args['model'])
             return { "session_id": id }
 
     def close_session(self, session_id):
@@ -96,11 +97,9 @@ class ServiceThreadBase(threading.Thread):
         with self._lock:
             if args["session_id"] not in self.sessions:
                 return { "error": "Session is not open" }
-            if len(self.queue) >= self.qlimit:
-                return { "error": "Server is busy" }
-            for q in self.queue:
-                if q["session_id"] == args["session_id"]:
-                    return { "error": "The job for this session already exists" }
+           # for q in self.queue:
+           #     if q["session_id"] == args["session_id"]:
+           #         return { "error": "The job for this session already exists" }
             a = {**args}
             a["count"] = int(a["count"])
             if a["count"] <= 0:
@@ -109,8 +108,14 @@ class ServiceThreadBase(threading.Thread):
             if a["count"] > self.max_img_cnt:
                 a["count"] = self.max_img_cnt
                 r["warning"] = f"maximum image count exceeded {self.max_img_cnt}"
-            self.queue.appendleft(a)
-            r["queue_number"] = len(self.queue)-1
+            try:
+                self.queue.put(a)
+            except Full:
+                return { "error": "Server is busy" }
+
+            r["queue_number"] = self.queue_num
+            self.queue_num += 1
+            self.logger.info(f'queued a job {a}')
             return r
 
     def get_image_count(self, session_id):
@@ -129,16 +134,7 @@ class ServiceThreadBase(threading.Thread):
         result = {}
         result["available_images"] = len(sess["images"])
         result["next_job"] = "None"
-        result["status"] = "open"
-        for i in range(len(self.queue)):
-            q = self.queue[i]
-            if q["session_id"] == session_id:
-                result["status"] = "running" if i == 0 else "queued"
-                result["next_job"] = {
-                    "queue_number": i,
-                    "image_count": q["count"]
-                }
-                break
+        result["status"] = sess.get('status', 'open') 
         return result
 
     def get_image_pathname(self, session_id, img_idx):
