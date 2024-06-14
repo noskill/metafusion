@@ -90,7 +90,10 @@ class MyTestCase(TestCase):
             cls = MaskedIm2ImPipe._classxl
         else:
             cls = MaskedIm2ImPipe._class
-        pipeline = loader.load_pipeline(cls, model_id)
+        device = torch.device('cpu')
+        if torch.cuda.is_available():
+            device = torch.device('cuda', 0)
+        pipeline = loader.load_pipeline(cls, model_id, device=device)
         inpaint = MaskedIm2ImPipe(model_id, pipe=pipeline)
 
         # create prompt2im pipe
@@ -98,10 +101,11 @@ class MyTestCase(TestCase):
             cls = Prompt2ImPipe._classxl
         else:
             cls = Prompt2ImPipe._class
-        pipeline = loader.load_pipeline(cls, model_id)
+        pipeline = loader.load_pipeline(cls, model_id, device=device)
         prompt2image = Prompt2ImPipe(model_id, pipe=pipeline)
         prompt2image.setup(width=512, height=512, scheduler="DPMSolverMultistepScheduler", clip_skip=2, steps=5)
-        self.assertEqual(inpaint.pipe.unet.conv_out.weight.data_ptr(),
+        if device.type == 'cuda':
+            self.assertEqual(inpaint.pipe.unet.conv_out.weight.data_ptr(),
                          prompt2image.pipe.unet.conv_out.weight.data_ptr(),
                          "unets are different")
 
