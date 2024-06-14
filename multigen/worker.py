@@ -142,6 +142,6 @@ class ServiceThread(ServiceThreadBase):
             raise e
         finally:
             self.logger.debug('unlock device %s', device)
-            if device is not None:
+            if device is not None and device.type == 'cuda':
                 with self._lock:
                     del self._gpu_jobs[device.index]

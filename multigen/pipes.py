@@ -67,7 +67,7 @@ class BasePipe:
     def __init__(self, model_id: str,
                  sd_pipe_class: Optional[Type[DiffusionPipeline]] = None,
                  pipe: Optional[DiffusionPipeline] = None,
-                 model_type: Optional[ModelType] = None, **args):
+                 model_type: Optional[ModelType] = None, device=None, **args):
         """
         Constructor
 
@@ -84,7 +84,8 @@ class BasePipe:
             **args:
                 additional arguments passed to sd_pipe_class constructor
         """
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        if device is None:
+            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.pipe = pipe
         self._scheduler = None
         self._hypernets = []
