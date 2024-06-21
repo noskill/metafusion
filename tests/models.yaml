@@ -1,0 +1,21 @@
+base:
+  netta:
+    id: SDXL/tiny-sdxl1
+    xl: True
+  sdxl1:
+    id: SDXL/tiny-sdxl2
+    xl: True
+  jug:
+    id: SDXL/tiny-sdxl3
+    xl: True
+  nih:
+    id: SDXL/tiny-sdxl4
+    xl: True
+
+pipes:
+    prompt2image:
+        name: "Prompt to Image"
+        classname: Prompt2ImPipe
+        need_imgs: False
+        needs_cnet: False
+

@@ -1,0 +1,3 @@
+model_list: models.yaml
+model_dir: ./models-sd/
+logging_folder: ./logs/
