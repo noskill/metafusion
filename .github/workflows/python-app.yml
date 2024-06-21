@@ -30,3 +30,6 @@ jobs:
     - name: Test with pytest
       run: |
         cd tests && python pipe_test.py
+    - name: Test worker 
+      run: |
+        cd tests && python test_worker.py
