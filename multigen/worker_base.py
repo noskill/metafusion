@@ -7,7 +7,6 @@ import random
 import yaml
 from pathlib import Path
 import logging
-from .pipes import Prompt2ImPipe, MaskedIm2ImPipe, Cond2ImPipe, Im2ImPipe
 from .loader import Loader
 
 

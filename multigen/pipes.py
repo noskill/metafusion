@@ -103,8 +103,9 @@ class BasePipe:
         self._initialize_pipe(device)
             
     def _initialize_pipe(self, device):
-        if self.pipe.device != device:
-            self.pipe.to(device)
+        # sometimes text encoder is on a different device
+        # if self.pipe.device != device:
+        self.pipe.to(device)
         # self.pipe.enable_attention_slicing()
         # self.pipe.enable_vae_slicing()
         self.pipe.vae.enable_tiling()
